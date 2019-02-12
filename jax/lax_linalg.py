@@ -34,7 +34,9 @@ from jaxlib import lapack
 
 # traceables
 
-def cholesky(x): return cholesky_p.bind(x)
+def cholesky(x):
+  x = (x + _T(x)) / 2  # orthogonal projection onto symmetric matrices
+  return cholesky_p.bind(x)
 
 def eigh(x, lower=True): return eigh_p.bind(x, lower=lower)
 
@@ -76,7 +78,6 @@ def cholesky_jvp_rule(primals, tangents):
   L = cholesky_p.bind(x)
 
   # Forward-mode rule from https://arxiv.org/pdf/1602.07527.pdf
-  sigma_dot = (sigma_dot + _T(sigma_dot)) / 2
   phi = lambda X: np.tril(X) / (1 + np.eye(x.shape[-1]))
   tmp = triangular_solve(L, sigma_dot,
                          left_side=False, transpose_a=True, lower=True)

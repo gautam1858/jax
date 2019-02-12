@@ -47,7 +47,6 @@ def _promote_arg_dtypes(*args):
     return args
 
 
-
 @_wraps(onp.linalg.cholesky)
 def cholesky(a):
   warnings.warn(_EXPERIMENTAL_WARNING)

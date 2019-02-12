@@ -61,14 +61,15 @@ class NumpyLinalgTest(jtu.JaxTestCase):
       for rng in [jtu.rand_default()]))
   def testCholesky(self, shape, dtype, rng):
     def args_maker():
-      a = rng(shape, dtype)
+      factor_shape = shape[:-1] + (2 * shape[-1],)
+      a = rng(factor_shape, dtype)
       return [onp.matmul(a, np.conj(T(a)))]
 
     self._CheckAgainstNumpy(onp.linalg.cholesky, np.linalg.cholesky, args_maker,
                             check_dtypes=True, tol=1e-3)
     self._CompileAndCheck(np.linalg.cholesky, args_maker, check_dtypes=True)
 
-    jtu.check_grads(np.linalg.cholesky, args_maker(), 1, rtol=1e-1)
+    jtu.check_grads(np.linalg.cholesky, args_maker(), 1, rtol=1e-3)
 
   @parameterized.named_parameters(jtu.cases_from_list(
       {"testcase_name":
