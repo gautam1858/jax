@@ -832,8 +832,10 @@ standard_binop = partial(binop, _input_dtype)
 def _brcast(x, *others):
   # used in jvprules to make binop broadcasting explicit for transposability.
   # requires shape info during jvp tracing, which isn't strictly necessary.
-  shapes = list(filter(None, map(onp.shape, (x,) + others)))
-  shape = tuple(shapes and onp.max(shapes, axis=0))
+  # we don't need to add leading 1's as in numpy broadcasting, but otherwise the
+  # logic is the same so we reuse the broadcast_shapes function.
+  shapes = filter(None, map(onp.shape, (x,) + others))
+  shape = broadcast_shapes(*shapes)
   if onp.shape(x) != shape:
     return _brcast_to(x, shape)
   else:
@@ -843,16 +845,14 @@ def _brcast(x, *others):
 def _brcast_to(x, shape):
   x_shape = onp.shape(x)
   assert x_shape != shape
-  if not prod(x_shape):
-    return x
-  elif not x_shape:
-    return broadcast(x, shape)
-  else:
+  if x_shape:
     assert len(x_shape) == len(shape)
     broadcast_dimensions, = onp.where(onp.equal(x_shape, shape))
     squeezed_dimensions, = onp.where(onp.not_equal(x_shape, shape))
     inshape = onp.delete(x_shape, squeezed_dimensions)
     return broadcast_in_dim(reshape(x, inshape), shape, broadcast_dimensions)
+  else:
+    return broadcast(x, shape)
 
 
 _f32 = {onp.float32}

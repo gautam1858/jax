@@ -34,9 +34,9 @@ from jaxlib import lapack
 
 # traceables
 
-def cholesky(x, symmetrize=True):
-  if symmetrize:
-    x = (x + _H(x)) / 2  # orthogonal projection onto self-adjoint matrices
+def cholesky(x, symmetrize_input=True):
+  if symmetrize_input:
+    x = symmetrize(x)
   return cholesky_p.bind(x)
 
 def eigh(x, lower=True): return eigh_p.bind(x, lower=lower)
@@ -65,6 +65,7 @@ def triangular_solve(a, b, left_side=False, lower=False, transpose_a=False,
 
 def _T(x): return np.swapaxes(x, -1, -2)
 def _H(x): return np.conj(_T(x))
+def symmetrize(x): return (x + _H(x)) / 2
 
 
 # primitives
@@ -82,7 +83,7 @@ def cholesky_jvp_rule(primals, tangents):
   phi = lambda X: np.tril(X) / (1 + np.eye(x.shape[-1]))
   tmp = triangular_solve(L, sigma_dot,
                          left_side=False, transpose_a=True, lower=True)
-  L_dot = np.matmul(L, phi(triangular_solve(
+  L_dot = lax.batch_matmul(L, phi(triangular_solve(
       L, tmp, left_side=True, transpose_a=False, lower=True)))
   return L, L_dot
 
