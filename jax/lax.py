@@ -1356,10 +1356,6 @@ def _dot_general_shape_rule(lhs, rhs, dimension_numbers):
     msg = ("dot_general requires rhs batch dimensions to precede contracting "
            "and non-contracting dimensions, got rhs_batch {}.")
     raise TypeError(msg.format(rhs_batch))
-  if not len(lhs_contracting) == len(rhs_contracting) == 1:
-    msg = ("dot_general accepts exactly one lhs_contracting and "
-           "rhs_contracting dimension, got {} and {}.")
-    raise TypeError(msg.format(lhs_contracting, rhs_contracting))
   lhs_contracting_shape = onp.take(lhs.shape, lhs_contracting)
   rhs_contracting_shape = onp.take(rhs.shape, rhs_contracting)
   if not onp.all(onp.equal(lhs_contracting_shape, rhs_contracting_shape)):
