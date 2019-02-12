@@ -34,8 +34,9 @@ from jaxlib import lapack
 
 # traceables
 
-def cholesky(x):
-  x = (x + _H(x)) / 2  # orthogonal projection onto self-adjoint matrices
+def cholesky(x, symmetrize=True):
+  if symmetrize:
+    x = (x + _H(x)) / 2  # orthogonal projection onto self-adjoint matrices
   return cholesky_p.bind(x)
 
 def eigh(x, lower=True): return eigh_p.bind(x, lower=lower)
