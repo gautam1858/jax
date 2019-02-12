@@ -35,7 +35,7 @@ from jaxlib import lapack
 # traceables
 
 def cholesky(x):
-  x = (x + _T(x)) / 2  # orthogonal projection onto symmetric matrices
+  x = (x + _H(x)) / 2  # orthogonal projection onto self-adjoint matrices
   return cholesky_p.bind(x)
 
 def eigh(x, lower=True): return eigh_p.bind(x, lower=lower)
@@ -62,8 +62,8 @@ def triangular_solve(a, b, left_side=False, lower=False, transpose_a=False,
 
 # utilities
 
-def _T(x):
-  return np.swapaxes(x, -1, -2)
+def _T(x): return np.swapaxes(x, -1, -2)
+def _H(x): return np.conj(_T(x))
 
 
 # primitives

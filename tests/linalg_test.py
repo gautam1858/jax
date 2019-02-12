@@ -303,7 +303,6 @@ class NumpyLinalgTest(jtu.JaxTestCase):
                             check_dtypes=True, tol=1e-3)
     self._CompileAndCheck(np.linalg.solve, args_maker, check_dtypes=True)
 
-
   @parameterized.named_parameters(jtu.cases_from_list(
       {"testcase_name":
        "_shape={}".format(jtu.format_shape_dtype_string(shape, dtype)),
@@ -377,7 +376,6 @@ class ScipyLinalgTest(jtu.JaxTestCase):
                             args_maker, check_dtypes=True, tol=1e-3)
     self._CompileAndCheck(jsp.linalg.lu_factor, args_maker, check_dtypes=True)
 
-
   @parameterized.named_parameters(jtu.cases_from_list(
       {"testcase_name":
        "_lhs={}_rhs={}_sym_pos={}_lower={}".format(
@@ -416,7 +414,6 @@ class ScipyLinalgTest(jtu.JaxTestCase):
     self._CheckAgainstNumpy(osp_fun, jsp_fun, args_maker,
                             check_dtypes=True, tol=1e-3)
     self._CompileAndCheck(jsp_fun, args_maker, check_dtypes=True)
-
 
   @parameterized.named_parameters(jtu.cases_from_list(
       {"testcase_name":
@@ -484,6 +481,7 @@ class ScipyLinalgTest(jtu.JaxTestCase):
     f = partial(jsp.linalg.solve_triangular, lower=lower,
                 trans=1 if transpose_a else 0)
     jtu.check_grads(f, (A, B), 2, rtol=1e-3)
+
 
 if __name__ == "__main__":
   absltest.main()
