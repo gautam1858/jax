@@ -830,12 +830,12 @@ standard_binop = partial(binop, _input_dtype)
 # a broadcast). but saving the shape info with the primitives isn't great either
 # because then we can't trace these ops without shape data.
 def _brcast(x, *others):
-  # used in jvprules to make binop broadcasting explicit for transposability.
-  # requires shape info during jvp tracing, which isn't strictly necessary.
-  # we don't need to add leading 1's as in numpy broadcasting, but otherwise the
-  # logic is the same so we reuse the broadcast_shapes function.
-  shapes = filter(None, map(onp.shape, (x,) + others))
-  shape = broadcast_shapes(*shapes)
+  # Used in jvprules to make binop broadcasting explicit for transposability.
+  # Requires shape info during jvp tracing, which isn't strictly necessary.
+  # We don't need full numpy broadcasting, but otherwise the logic is the same
+  # so we reuse the broadcast_shapes function after filtering out scalars.
+  shapes = tuple(filter(None, map(onp.shape, (x,) + others)))
+  shape = shapes and broadcast_shapes(*shapes)
   if onp.shape(x) != shape:
     return _brcast_to(x, shape)
   else:
