@@ -357,9 +357,6 @@ def backward_pass(jaxpr: core.Jaxpr, transform_stack,
       return v.val
     else:
       a = v.aval
-      if type(a) is core.DShapedArray:
-        shape = [primal_env[d] if type(d) is core.Var else d for d in a.shape]
-        a = a.update(shape=tuple(shape))
       return primal_env.get(v, UndefinedPrimal(a))
 
   def write_primal(v, val):
@@ -1339,10 +1336,7 @@ def call_transpose(primitive, params, call_jaxpr: core.Jaxpr, args, ct, _):
     which_lin = [is_undefined_primal(x) for x in args]
     res_invars, _ = partition_list(which_lin, call_jaxpr.invars)
     new_invars = [*res_invars, *call_jaxpr.outvars]
-    dbidx_map = {v: core.DBIdx(i) for i, v in enumerate(new_invars)}
-    in_type = [(v.aval.update(shape=tuple(dbidx_map.get(d, d) for d in v.aval.shape))  # type: ignore[arg-type]
-                if type(v.aval) is core.DShapedArray else v.aval, True) for v in new_invars]
-    fun = lu.annotate(fun, tuple(in_type))
+    fun = lu.annotate(fun, tuple(new_invars))
   out_flat = primitive.bind(fun, *all_args, **params)
   return tree_unflatten(out_tree(), out_flat)
 primitive_transposes[core.call_p] = partial(call_transpose, call_p)

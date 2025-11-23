@@ -1949,10 +1949,9 @@ def _pjit_batcher(axis_data, vals_in,
                   in_shardings, out_shardings, in_layouts, out_layouts,
                   donated_invars, ctx_mesh, name, keep_unused, inline,
                   compiler_options_kvs):
-  segment_lens, dims_in = batching.indirectify_ragged_axes(dims_in)
-  new_jaxpr, axes_out = batching.batch_jaxpr2(jaxpr, axis_data, dims_in)
+  new_jaxpr, axes_out = batching.batch_jaxpr(jaxpr, axis_data,
+                                             dims_in, instantiate=False)
 
-  # TODO(axch): prepend with Nones (?) to account for new segment_lens inputs
   in_shardings = tuple(
       _pjit_batcher_for_sharding(i, axis_in, axis_data.spmd_name, ctx_mesh,
                                  aval.ndim)
@@ -1988,7 +1987,6 @@ def _pjit_batcher(axis_data, vals_in,
   return vals_out, resolved_axes_out
 
 batching.fancy_primitive_batchers[jit_p] = _pjit_batcher
-batching.ragged_prop_rules[jit_p] = batching.ragged_mask_no_op_rule
 
 
 def _pjit_batcher_for_sharding(
