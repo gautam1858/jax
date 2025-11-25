@@ -89,8 +89,9 @@ uint64_t GetBaseLaunchId(std::optional<std::string> fingerprint,
   // Pmap and replicated executables for example will only populate the local
   // device to the loaded executable and all devices will have different devices
   // fingerprints.
-  if (!executable->devices()->IsFullyAddressable()) {
-    ret += executable->devices()->fingerprint();
+  if (std::optional<ifrt::DeviceListRef> device_list = executable->devices();
+      device_list.has_value() && !(*device_list)->IsFullyAddressable()) {
+    ret += (*device_list)->fingerprint();
   }
   return ret;
 }
@@ -515,7 +516,9 @@ int32_t PyLoadedExecutable::GetNextLaunchId() {
   VLOG(1) << "Launching executable " << ifrt_loaded_executable_->name()
           << " with launch ID: " << launch_id;
   VLOG(2) << "Executable devices for launch ID " << launch_id << ": "
-          << ifrt_loaded_executable_->devices()->DebugString();
+          << (ifrt_loaded_executable_->devices().has_value()
+                  ? (*ifrt_loaded_executable_->devices())->DebugString()
+                  : "<nullopt>");
   return launch_id;
 }
 
