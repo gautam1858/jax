@@ -174,11 +174,8 @@ def dynamic_slice(
   """
   start_indices = _dynamic_slice_indices(
       operand, start_indices, allow_negative_indices)
-  if config.dynamic_shapes.value:
-    dynamic_sizes, static_sizes = lax._extract_tracers_dyn_shape(slice_sizes)
-  else:
-    dynamic_sizes = []
-    static_sizes = core.canonicalize_shape(slice_sizes)  # type: ignore
+  dynamic_sizes = []
+  static_sizes = core.canonicalize_shape(slice_sizes)  # type: ignore
   operand, *start_indices = core.standard_insert_pvary(
       operand, *start_indices)
   return dynamic_slice_p.bind(operand, *start_indices, *dynamic_sizes,
@@ -1367,11 +1364,10 @@ def _slice_shape_rule(operand, *, start_indices, limit_indices, strides):
     msg = ("slice start_indices must be greater than or equal to zero, "
            "got start_indices of {}.")
     raise TypeError(msg.format(start_indices))
-  if not config.dynamic_shapes.value:
-    if not all(map(operator.ge, limit_indices, start_indices)):
-      msg = ("slice limit_indices must be greater than or equal to start_indices,"
-            " got start_indices {} and limit_indices {}.")
-      raise TypeError(msg.format(start_indices, limit_indices))
+  if not all(map(operator.ge, limit_indices, start_indices)):
+    msg = ("slice limit_indices must be greater than or equal to start_indices,"
+          " got start_indices {} and limit_indices {}.")
+    raise TypeError(msg.format(start_indices, limit_indices))
   diff = tuple(map(operator.sub, limit_indices, start_indices))
   if strides is None or tuple(strides) == (1,) * len(operand.shape):
     return diff

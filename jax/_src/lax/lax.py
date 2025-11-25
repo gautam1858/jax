@@ -7040,12 +7040,6 @@ def _reshape_shape_rule(operand, *, new_sizes, dimensions, sharding):
   # TODO(necula): re-enable this check
   operand_size = math.prod(np.shape(operand))
   new_size = math.prod(new_sizes)
-  if (not config.dynamic_shapes.value and
-      not operand_size == new_size):
-    msg = (f"reshape total size must be unchanged, got new_sizes {new_sizes} "
-           f"(of total size {new_size}) for shape {np.shape(operand)} "
-           f"(of total size {operand_size}).")
-    raise TypeError(msg)
   if dimensions is not None:
     if set(dimensions) != set(range(np.ndim(operand))):
       msg = ('reshape dimensions must be a permutation of operand dimensions, '
@@ -8709,9 +8703,6 @@ def _check_shapelike(fun_name, arg_name, obj, non_zero_shape=False):
   # bool(obj) for an ndarray raises an error, so we check len
   if not len(obj):  # pylint: disable=g-explicit-length-test
     return
-  if (config.dynamic_shapes.value and isinstance(obj, (tuple, list)) and
-      any(isinstance(d, (core.Tracer, core.DArray)) for d in obj)):
-    return  # TODO(mattjj): handle more checks in the dynamic shape case
   obj_arr = np.array(obj)
   if obj_arr.ndim != 1:
     msg = "{} {} must be 1-dimensional, got {}."

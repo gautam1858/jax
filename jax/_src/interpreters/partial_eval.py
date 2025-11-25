@@ -2049,7 +2049,7 @@ class DynamicJaxprTrace(core.Trace):
     # TODO(mattjj,dougalm): clean up how we check for new-style hi primitives
     if primitive is call_hi_primitive_p:
       out_avals, effs = params['prim'].out_avals_flat, set()  # TODO effs
-    elif (primitive.name == "custom_lin" or config.dynamic_shapes.value or
+    elif (primitive.name == "custom_lin" or
         primitive.is_effectful and primitive.is_effectful(params)):
       out_avals, effs = primitive.abstract_eval(*aval_qdds, **params)
     else:
@@ -2110,10 +2110,9 @@ class DynamicJaxprTrace(core.Trace):
       new_params = update_params(new_params, [True] * len(in_tracers),
                                  len(consts) + len(implicit_tracers))
     const_tracers = map(to_jaxpr_tracer, consts)
-    out_tracers = self.emit_eqn(
+    return self.emit_eqn(
         [*const_tracers, *in_tracers], out_avals, call_primitive,
         new_params, new_params['call_jaxpr'].effects, source_info=source_info)
-    return zip(out_tracers, out_avals)
 
   def process_map(self, map_primitive, f: lu.WrappedFun, tracers, params):
     source_info = source_info_util.current()

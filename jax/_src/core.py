@@ -730,7 +730,7 @@ def eval_jaxpr(jaxpr: Jaxpr, consts, *args, propagate_source_info=True) -> list[
     return v.val if isinstance(v, Literal) else env[v]
 
   def write(v: Var, val: Any) -> None:
-    if config.enable_checks.value and not config.dynamic_shapes.value:
+    if config.enable_checks.value:
       assert typecheck(v.aval, val), (v.aval, get_aval(val), val)
     env[v] = val
 
@@ -1930,6 +1930,7 @@ def physical_element_aval(edtype: dtypes.ExtendedDType) -> ShapedArray:
 def _dtype_object(dtype):
   return dtype if isinstance(dtype, dtypes.ExtendedDType) else np.dtype(dtype)
 
+# TODO(dougalm): Remove this and let ShapedArray inherit from AbstractValue.
 class UnshapedArray(AbstractValue):
   __slots__ = ['dtype', 'weak_type']
   array_abstraction_level = 4
@@ -1981,15 +1982,7 @@ def _canonicalize_dimension(dim: DimSize) -> DimSize:
     return operator.index(dim)
   except TypeError as e:
     type_error = e
-  if isinstance(dim, Tracer) and config.dynamic_shapes.value:
-    if not (dim.ndim == 0 and (dtypes.issubdtype(dim.dtype, np.integer)
-                               or isinstance(dim.dtype, bint))):
-      raise TypeError(f"Dimensions must be integer scalars; got {dim.ndim=} {dim.dtype=}")
-    return dim
-  elif (config.dynamic_shapes.value and isinstance(dim, DArray) and
-        type(dim._aval.dtype) is bint and not dim._aval.shape):
-    return dim
-  elif is_dim(dim):
+  if is_dim(dim):
     return dim
   else:
     raise type_error
@@ -2023,16 +2016,11 @@ def canonicalize_dim(d: DimSize, context: str="") -> DimSize:
   return canonicalize_shape((d,), context)[0]
 
 def _invalid_shape_error(shape: Shape, context: str=""):
-  if config.dynamic_shapes.value:
-    msg = ("Shapes must be 1D sequences of integer scalars, "
-           f"got {shape}")
-  else:
-    msg = ("Shapes must be 1D sequences of concrete values of integer type, "
-           f"got {shape}.")
+  msg = ("Shapes must be 1D sequences of concrete values of integer type, "
+         f"got {shape}.")
   if context:
     msg += f" {context}."
-  if not config.dynamic_shapes.value and any(
-         isinstance(x, Tracer) and isinstance(get_aval(x), ShapedArray)
+  if any(isinstance(x, Tracer) and isinstance(get_aval(x), ShapedArray)
          and not is_concrete(x) for x in shape):
     msg += ("\nIf using `jit`, try using `static_argnums` or applying `jit` to "
             "smaller subfunctions.")
@@ -2929,8 +2917,6 @@ class CallPrimitive(Primitive):
     jaxpr = new_params.pop('call_jaxpr')
     subfun = lu.hashable_partial(
         lu.wrap_init(eval_jaxpr, debug_info=jaxpr.debug_info), jaxpr, ())
-    if config.dynamic_shapes.value:
-      subfun = lu.annotate(subfun, _jaxpr_type_to_callable_annotation(jaxpr))
     return [subfun], new_params
 
 def call_impl(f: lu.WrappedFun, *args, **params):

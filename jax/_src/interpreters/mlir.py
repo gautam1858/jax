@@ -980,20 +980,16 @@ def sharded_aval(aval: core.AbstractValue,
 
 def eval_dynamic_shape(ctx: LoweringRuleContext,
                        shape: core.Shape) -> tuple[int | Value, ...]:
-  if config.dynamic_shapes.value:
-    assert ctx.axis_size_env is not None
-    return tuple(ctx.axis_size_env.get(d, d) for d in shape)  # type: ignore
-  else:
-    ctx = ctx.replace(
-        primitive="eval_dynamic_shape",
-        avals_in=[core.dim_value_aval()] * len(ctx.module_context.shape_poly_state.dim_vars),
-        tokens_out=None)
+  ctx = ctx.replace(
+      primitive="eval_dynamic_shape",
+      avals_in=[core.dim_value_aval()] * len(ctx.module_context.shape_poly_state.dim_vars),
+      tokens_out=None)
 
-    res = lower_fun(
-        partial(core.evaluate_shape, shape, ctx.module_context.shape_poly_state.dim_vars),
-        multiple_results=True)(ctx, *ctx.dim_var_values)
-    return tuple(operator.index(d) if core.is_constant_dim(d) else d_ir
-                 for d, d_ir in zip(shape, flatten_ir_values(res)))
+  res = lower_fun(
+      partial(core.evaluate_shape, shape, ctx.module_context.shape_poly_state.dim_vars),
+      multiple_results=True)(ctx, *ctx.dim_var_values)
+  return tuple(operator.index(d) if core.is_constant_dim(d) else d_ir
+               for d, d_ir in zip(shape, flatten_ir_values(res)))
 
 # TODO: replace usage of eval_dynamic_shape_as_vals with eval_dynamic_shape_as_ivals
 def eval_dynamic_shape_as_vals(ctx: LoweringRuleContext,
@@ -1287,17 +1283,7 @@ def lower_jaxpr_to_module(
   # Create a keepalives list that will be mutated during the lowering.
   keepalives: list[Any] = []
   host_callbacks: list[Any] = []
-
-  dim_vars: Sequence[str]
-  if not config.dynamic_shapes.value:
-    # Find the dimension variables
-    all_dim_poly = [d for aval in sharded_in_avals if hasattr(aval, "shape")
-                    for d in aval.shape if not core.is_constant_dim(d)]
-    dim_vars = tuple(sorted(functools.reduce(lambda acc, new: acc.union(new._get_vars()),
-                                             all_dim_poly, set())))
-  else:
-    dim_vars = ()
-
+  dim_vars = ()
   ctx = ModuleContext(backend=backend,
                       platforms=platforms, axis_context=axis_context,
                       keepalives=keepalives,
@@ -2064,8 +2050,7 @@ def jaxpr_subcomp(ctx: ModuleContext, jaxpr: core.Jaxpr,
           eqn.ctx.manager):
       # TODO(mattjj, phawkins): support caching for dynamic shapes.
       can_cache_lowering = (
-          eqn.primitive not in _uncacheable_primitives and
-          not config.dynamic_shapes.value)
+          eqn.primitive not in _uncacheable_primitives)
       if can_cache_lowering:
         loc = source_info_to_location(ctx, None, eqn_name_stack,
                                       eqn.source_info.traceback)

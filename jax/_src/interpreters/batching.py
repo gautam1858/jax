@@ -247,8 +247,6 @@ class BatchTrace(Trace):
       return val, not_mapped
 
   def process_primitive(self, p, tracers, params):
-    if config.dynamic_shapes.value:
-      p.abstract_eval(*(map(core.get_aval, tracers)), **params)
     vals_in, dims_in = unzip2(map(self.to_batch_info, tracers))
     args_not_mapped = all(bdim is not_mapped for bdim in dims_in)
     if p in fancy_primitive_batchers:
