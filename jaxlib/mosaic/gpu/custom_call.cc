@@ -110,6 +110,7 @@ limitations under the License.
 #include "jaxlib/mosaic/gpu/passes.h"
 #include "jaxlib/mosaic/gpu/serde.h"
 #include "jaxlib/mosaic/gpu/target.h"
+#include "xla/backends/gpu/ffi.h"
 #include "xla/executable_run_options.h"
 #include "xla/ffi/ffi.h"
 #include "xla/ffi/ffi_api.h"
@@ -158,43 +159,42 @@ mlir::FailureOr<mlir::OpPassManager> GetPassPipeline(
     const se::CudaComputeCapability& cc, const std::string& sm,
     const std::string& ptx_isa, const std::string& nvshmem_path) {
   static absl::once_flag register_passes_flag;
-  absl::call_once(
-      register_passes_flag, [&compilation_provider, &cc]() {
-        mosaic::gpu::EnsureLLVMNVPTXTargetIsRegistered();
+  absl::call_once(register_passes_flag, [&compilation_provider, &cc]() {
+    mosaic::gpu::EnsureLLVMNVPTXTargetIsRegistered();
 
-        llvm::InitializeNativeTarget();
-        llvm::InitializeNativeTarget();
-        llvm::InitializeNativeTargetAsmPrinter();
-        mlir::registerCanonicalizer();
-        mlir::registerCSE();
-        mlir::registerStripDebugInfo();
-        mlir::registerConvertNVGPUToNVVMPass();
-        mlir::registerConvertVectorToSCF();
-        mlir::registerSCFToControlFlowPass();
-        mlir::registerConvertNVVMToLLVMPass();
-        mlir::registerArithToLLVMConversionPass();
-        mlir::registerConvertIndexToLLVMPass();
-        mlir::registerConvertGpuOpsToNVVMOps();
-        mlir::registerConvertMathToLLVMPass();
-        mlir::registerConvertFuncToLLVMPass();
-        mlir::registerLowerAffinePass();
-        mlir::registerReconcileUnrealizedCastsPass();
-        // TODO(apaszke): Only register the passes we actually use.
-        mlir::memref::registerMemRefPasses();
-        mlir::registerConvertToLLVMPass();
-        mlir::registerGPUPasses();
-        mlir::registerGpuLaunchSinkIndexComputationsPass();
-        mosaic::gpu::registerGpuModuleToAssemblyPass();
-        mosaic::gpu::registerAssemblyToBinaryPass(compilation_provider, cc);
-        mosaic::gpu::registerGpuLaunchLoweringPass();
-        mosaic::gpu::registerConvertGpuToLLVMPass();
-        mosaic::gpu::registerByvalInsertionPass();
-        mosaic::gpu::registerLLVMAttrInsertionPass();
-        mosaic::gpu::registerResolveTrivialLocationsPass();
-        mlir::arith::registerArithExpandOpsPass();
-        mlir::LLVM::registerDIScopeForLLVMFuncOpPass();
-        return true;
-      });
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    mlir::registerCanonicalizer();
+    mlir::registerCSE();
+    mlir::registerStripDebugInfo();
+    mlir::registerConvertNVGPUToNVVMPass();
+    mlir::registerConvertVectorToSCF();
+    mlir::registerSCFToControlFlowPass();
+    mlir::registerConvertNVVMToLLVMPass();
+    mlir::registerArithToLLVMConversionPass();
+    mlir::registerConvertIndexToLLVMPass();
+    mlir::registerConvertGpuOpsToNVVMOps();
+    mlir::registerConvertMathToLLVMPass();
+    mlir::registerConvertFuncToLLVMPass();
+    mlir::registerLowerAffinePass();
+    mlir::registerReconcileUnrealizedCastsPass();
+    // TODO(apaszke): Only register the passes we actually use.
+    mlir::memref::registerMemRefPasses();
+    mlir::registerConvertToLLVMPass();
+    mlir::registerGPUPasses();
+    mlir::registerGpuLaunchSinkIndexComputationsPass();
+    mosaic::gpu::registerGpuModuleToAssemblyPass();
+    mosaic::gpu::registerAssemblyToBinaryPass(compilation_provider, cc);
+    mosaic::gpu::registerGpuLaunchLoweringPass();
+    mosaic::gpu::registerConvertGpuToLLVMPass();
+    mosaic::gpu::registerByvalInsertionPass();
+    mosaic::gpu::registerLLVMAttrInsertionPass();
+    mosaic::gpu::registerResolveTrivialLocationsPass();
+    mlir::arith::registerArithExpandOpsPass();
+    mlir::LLVM::registerDIScopeForLLVMFuncOpPass();
+    return true;
+  });
   const char* cuda_root = mosaic::gpu::GetCUDARoot();
   if (!cuda_root) {
     return mlir::failure();
@@ -692,8 +692,7 @@ absl::Status MosaicGpuExecute(gpuStream_t stream, ffi::RemainingArgs inputs,
     abort();
   }
   CacheKey key(hash, reinterpret_cast<uintptr_t>(ctx));
-  TF_ASSIGN_OR_RETURN(auto compiled_kernel,
-                      CachedCompileAndInit(key, module));
+  TF_ASSIGN_OR_RETURN(auto compiled_kernel, CachedCompileAndInit(key, module));
   auto ctx_kernel_comm = compiled_kernel->GetHostLaunch();
   bool is_comm_used = std::get<2>(ctx_kernel_comm);
 
@@ -737,7 +736,7 @@ XLA_FFI_DEFINE_HANDLER(kMosaicGpuExecute, MosaicGpuExecute,
                            .Attr<std::string_view>("module")
                            .Attr<bool>("use_custom_barrier")
                            .Ctx<xla::RunId>(),
-                           {ffi::Traits::kCmdBufferCompatible});
+                       {ffi::Traits::kCmdBufferCompatible});
 
 XLA_FFI_REGISTER_HANDLER(ffi::GetXlaFfiApi(), "mosaic_gpu_v2", "CUDA",
                          {
